@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>I miei luoghi</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <style>
+    html, body, #map { height: 100%; margin: 0; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script>
+    const map = L.map("map").setView([45.46, 9.19], 6);
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap"
+    }).addTo(map);
+
+    fetch("/api/places").then(response => response.json()).then(places => {
+      const points = [];
+      const escapeHtml = value => String(value ?? "").replace(/[&<>"]/g, character => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"
+      })[character]);
+
+      places.forEach(place => {
+        const safeUrl = (() => {
+          try {
+            const url = new URL(place.maps_url);
+            return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+          } catch {
+            return null;
+          }
+        })();
+        const popup = `<b>${escapeHtml(place.name)}</b>` +
+          (place.note ? `<br><i>${escapeHtml(place.note)}</i>` : "") +
+          (safeUrl ? `<br><a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">Apri in Google Maps</a>` : "");
+
+        L.marker([place.lat, place.lng]).addTo(map).bindPopup(popup);
+        points.push([place.lat, place.lng]);
+      });
+
+      if (points.length) map.fitBounds(points, { padding: [40, 40], maxZoom: 15 });
+    });
+  </script>
+</body>
+</html>
