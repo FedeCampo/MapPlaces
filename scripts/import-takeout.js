@@ -57,7 +57,7 @@ const pending = places.filter((place) => !done.has(place.key));
 const failures = [];
 let next = 0;
 let finished = 0;
-let aborted = false;
+let aborted = null;
 
 console.log(`\n${places.length - pending.length} già importati, ${pending.length} da importare su ${api}\n`);
 
@@ -71,7 +71,8 @@ await Promise.all(
         await writeFile(PROGRESS_FILE, JSON.stringify([...done]));
         console.log(`[${++finished}/${pending.length}] ok   ${saved.name}`);
       } catch (error) {
-        if (error.status === 401) aborted = true;
+        if (error.status === 401) aborted = "Token non valido (401): controlla API_TOKEN in .env.local";
+        if (error.status === 429) aborted = "Limite giornaliero Google raggiunto: rilancia lo stesso comando domani, riparte da qui";
         failures.push({ ...place, error: error.message });
         console.log(`[${++finished}/${pending.length}] FAIL ${place.title || place.url} - ${error.message}`);
       }
@@ -79,7 +80,7 @@ await Promise.all(
   })
 );
 
-if (aborted) console.log("\nToken non valido (401): controlla API_TOKEN in .env.local");
+if (aborted) console.log(`\n${aborted}`);
 if (failures.length) {
   await writeFile(FAILURES_FILE, JSON.stringify(failures, null, 2));
   console.log(`\n${failures.length} non importati, dettagli in ${FAILURES_FILE}. Rilancia lo stesso comando per riprovare.`);
@@ -174,7 +175,7 @@ async function send(place) {
       body: JSON.stringify(body),
     });
     if (response.ok) return response.json();
-    if ((response.status === 429 || response.status >= 500) && attempt < 3) {
+    if (response.status >= 500 && attempt < 3) {
       await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
       continue;
     }

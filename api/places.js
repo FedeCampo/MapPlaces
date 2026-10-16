@@ -102,7 +102,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(row);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(error.status ?? 500).json({ error: error.message });
   }
 }
 
@@ -218,6 +218,7 @@ async function getPlace(placeId) {
     },
   });
 
+  checkQuota(response);
   return response.ok ? response.json() : null;
 }
 
@@ -242,9 +243,16 @@ async function findPlace(query, coords) {
     body: JSON.stringify(body),
   });
 
+  checkQuota(response);
   if (!response.ok) return null;
   const { places = [] } = await response.json();
   return places[0] ?? null;
+}
+
+function checkQuota(response) {
+  if (response.status === 429) {
+    throw Object.assign(new Error("Limite giornaliero Google raggiunto, riprova domani"), { status: 429 });
+  }
 }
 
 function isValidCoords(lat, lng) {
