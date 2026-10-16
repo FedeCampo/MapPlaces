@@ -1,4 +1,4 @@
-import { put, list, head, BlobNotFoundError } from "@vercel/blob";
+import { put, list, get } from "@vercel/blob";
 
 const PLACE_FIELDS = ["id", "displayName", "formattedAddress", "location", "types", "googleMapsUri"];
 const BROWSER_HEADERS = {
@@ -93,7 +93,7 @@ export default async function handler(req, res) {
     row.updated_at = new Date().toISOString();
 
     await put(pathname, JSON.stringify(row), {
-      access: "public",
+      access: "private",
       contentType: "application/json",
       addRandomSuffix: false,
       allowOverwrite: true,
@@ -116,23 +116,14 @@ async function readAll() {
     cursor = page.hasMore ? page.cursor : undefined;
   } while (cursor);
 
-  const places = await Promise.all(blobs.map(fetchBlobJson));
+  const places = await Promise.all(blobs.map((blob) => readPlace(blob.pathname, true).catch(() => null)));
 
   return places.filter(Boolean).sort((a, b) => (b.created_at > a.created_at ? 1 : -1));
 }
 
-async function readPlace(pathname) {
-  try {
-    return await fetchBlobJson(await head(pathname));
-  } catch (error) {
-    if (error instanceof BlobNotFoundError) return null;
-    throw error;
-  }
-}
-
-async function fetchBlobJson(blob) {
-  const response = await fetch(`${blob.url}?v=${new Date(blob.uploadedAt).getTime()}`);
-  return response.ok ? response.json() : null;
+async function readPlace(pathname, useCache = false) {
+  const result = await get(pathname, { access: "private", useCache });
+  return result?.stream ? new Response(result.stream).json() : null;
 }
 
 async function parseMapsLink(link) {
