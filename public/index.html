@@ -36,6 +36,7 @@
         })();
         const popup = `<b>${escapeHtml(place.name)}</b>` +
           (place.note ? `<br><i>${escapeHtml(place.note)}</i>` : "") +
+          (place.lists?.length ? `<br><small>${escapeHtml(place.lists.join(" · "))}</small>` : "") +
           (safeUrl ? `<br><a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer">Apri in Google Maps</a>` : "");
 
         L.marker([place.lat, place.lng]).addTo(map).bindPopup(popup);

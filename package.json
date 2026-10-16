@@ -2,6 +2,9 @@
   "name": "mapsaver",
   "private": true,
   "type": "module",
+  "scripts": {
+    "import": "node scripts/import-takeout.js"
+  },
   "engines": {
     "node": "22.x"
   },

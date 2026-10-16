@@ -1,3 +1,5 @@
 .vercel
 .env*
 node_modules/
+.import-progress.json
+import-failures.json
